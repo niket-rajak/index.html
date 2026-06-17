@@ -1,0 +1,946 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mars Biomechanics Dashboard</title>
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --bg2: #111118;
+    --bg3: #16161f;
+    --card: #1a1a24;
+    --border: rgba(255,255,255,0.07);
+    --mars: #e05a2b;
+    --mars-light: #f0844a;
+    --mars-glow: rgba(224,90,43,0.18);
+    --earth: #4a9eff;
+    --earth-light: #7bb8ff;
+    --text: #e8e6e0;
+    --muted: #7a7870;
+    --dim: #3a3835;
+    --accent: #c94f1f;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Courier New', 'Consolas', monospace;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Stars background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      radial-gradient(1px 1px at 10% 15%, rgba(255,255,255,0.6) 0%, transparent 100%),
+      radial-gradient(1px 1px at 25% 45%, rgba(255,255,255,0.4) 0%, transparent 100%),
+      radial-gradient(1px 1px at 40% 8%, rgba(255,255,255,0.5) 0%, transparent 100%),
+      radial-gradient(1px 1px at 55% 70%, rgba(255,255,255,0.3) 0%, transparent 100%),
+      radial-gradient(1px 1px at 70% 30%, rgba(255,255,255,0.6) 0%, transparent 100%),
+      radial-gradient(1px 1px at 85% 55%, rgba(255,255,255,0.4) 0%, transparent 100%),
+      radial-gradient(1px 1px at 92% 20%, rgba(255,255,255,0.5) 0%, transparent 100%),
+      radial-gradient(1px 1px at 15% 80%, rgba(255,255,255,0.3) 0%, transparent 100%),
+      radial-gradient(1px 1px at 60% 92%, rgba(255,255,255,0.4) 0%, transparent 100%),
+      radial-gradient(1px 1px at 35% 62%, rgba(255,255,255,0.2) 0%, transparent 100%),
+      radial-gradient(1px 1px at 78% 78%, rgba(255,255,255,0.5) 0%, transparent 100%),
+      radial-gradient(1px 1px at 5% 50%, rgba(255,255,255,0.3) 0%, transparent 100%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 24px 60px;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Header */
+  header {
+    padding: 48px 0 36px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 48px;
+  }
+
+  .header-tag {
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    color: var(--mars);
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+
+  h1 {
+    font-size: clamp(24px, 4vw, 38px);
+    font-weight: 400;
+    letter-spacing: 0.04em;
+    line-height: 1.2;
+    color: var(--text);
+  }
+
+  h1 span { color: var(--mars-light); }
+
+  .header-meta {
+    margin-top: 14px;
+    font-size: 12px;
+    color: var(--muted);
+    letter-spacing: 0.06em;
+    display: flex;
+    gap: 28px;
+    flex-wrap: wrap;
+  }
+
+  .header-meta span { display: flex; align-items: center; gap: 6px; }
+  .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--mars); display: inline-block; }
+  .dot.earth { background: var(--earth); }
+
+  /* Section styles */
+  .section {
+    margin-bottom: 52px;
+  }
+
+  .section-header {
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .section-num {
+    font-size: 10px;
+    color: var(--mars);
+    letter-spacing: 0.15em;
+  }
+
+  .section-title {
+    font-size: 13px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text);
+    font-weight: 400;
+  }
+
+  .section-sub {
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.05em;
+  }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 28px;
+  }
+
+  /* ─── SECTION 1: GAIT COMPARISON ─── */
+  .gait-panel {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .gait-side {
+    background: var(--card);
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .gait-label {
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+
+  .gait-label.earth-lbl { color: var(--earth-light); }
+  .gait-label.mars-lbl { color: var(--mars-light); }
+
+  .gait-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    width: 100%;
+    margin-top: 12px;
+  }
+
+  .gstat {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 8px 10px;
+    text-align: center;
+  }
+
+  .gstat-val {
+    font-size: 16px;
+    font-weight: 400;
+    margin-bottom: 2px;
+  }
+
+  .gstat-val.earth-lbl { color: var(--earth-light); }
+  .gstat-val.mars-lbl { color: var(--mars-light); }
+  .gstat-label { font-size: 9px; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; }
+
+  canvas#gaitCanvas {
+    border-radius: 2px;
+    display: block;
+  }
+
+  /* ─── SECTION 2: METABOLIC SLIDER ─── */
+  .metabolic-layout {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    gap: 20px;
+    align-items: start;
+  }
+
+  .slider-panel {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 24px;
+  }
+
+  .slider-panel label {
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+    display: block;
+    margin-bottom: 10px;
+  }
+
+  input[type=range] {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 2px;
+    background: var(--dim);
+    border-radius: 1px;
+    outline: none;
+    cursor: pointer;
+  }
+
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--mars);
+    border: 2px solid var(--bg);
+    cursor: pointer;
+  }
+
+  input[type=range]::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--mars);
+    border: 2px solid var(--bg);
+    cursor: pointer;
+  }
+
+  .gravity-display {
+    margin: 16px 0;
+    text-align: center;
+  }
+
+  .gravity-value {
+    font-size: 36px;
+    letter-spacing: -0.02em;
+    color: var(--mars-light);
+    line-height: 1;
+  }
+
+  .gravity-unit {
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    margin-top: 4px;
+  }
+
+  .planet-indicator {
+    margin-top: 14px;
+    padding: 10px;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    text-align: center;
+  }
+
+  .planet-name {
+    font-size: 12px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+
+  .met-readout {
+    font-size: 20px;
+    color: var(--mars-light);
+    margin-top: 8px;
+  }
+
+  .met-readout-lbl {
+    font-size: 9px;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+  }
+
+  .chart-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 20px;
+    position: relative;
+  }
+
+  /* ─── SECTION 3: BONE DENSITY ─── */
+  .bone-controls {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+
+  .bone-btn {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 8px 16px;
+    color: var(--muted);
+    font-family: inherit;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .bone-btn.active {
+    background: var(--mars-glow);
+    border-color: var(--mars);
+    color: var(--mars-light);
+  }
+
+  .bone-btn:hover:not(.active) { border-color: rgba(255,255,255,0.15); color: var(--text); }
+
+  .legend-row {
+    display: flex;
+    gap: 20px;
+    margin-top: 12px;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+  }
+
+  .legend-line {
+    width: 22px;
+    height: 2px;
+    border-radius: 1px;
+  }
+
+  .legend-line.dashed {
+    background: repeating-linear-gradient(to right, var(--earth) 0px, var(--earth) 6px, transparent 6px, transparent 10px);
+  }
+
+  .annotation-box {
+    position: absolute;
+    background: rgba(224,90,43,0.12);
+    border: 1px solid rgba(224,90,43,0.35);
+    border-radius: 3px;
+    padding: 6px 10px;
+    font-size: 10px;
+    color: var(--mars-light);
+    letter-spacing: 0.05em;
+    pointer-events: none;
+  }
+
+  /* Responsive */
+  @media (max-width: 680px) {
+    .metabolic-layout { grid-template-columns: 1fr; }
+    .gait-panel { grid-template-columns: 1fr; }
+    .gait-stats { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <div class="header-tag">// Research Simulation — Human Locomotion in Partial Gravity</div>
+    <h1>Mars <span>Biomechanics</span> Dashboard</h1>
+    <div class="header-meta">
+      <span><span class="dot"></span> Martian gravity: 0.38g (3.72 m/s²)</span>
+      <span><span class="dot earth"></span> Earth gravity: 1.00g (9.81 m/s²)</span>
+      <span>Mission duration modelled: 12 months</span>
+    </div>
+  </header>
+
+  <!-- ═══════ SECTION 1: GAIT ═══════ -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-num">01</span>
+      <span class="section-title">Gait Cycle Comparison</span>
+      <span class="section-sub">Side-by-side animated locomotion at 1g vs 0.38g</span>
+    </div>
+
+    <div class="gait-panel">
+      <!-- Earth side -->
+      <div class="gait-side">
+        <div class="gait-label earth-lbl">Earth — 1.00g</div>
+        <canvas id="earthCanvas" width="280" height="200"></canvas>
+        <div class="gait-stats">
+          <div class="gstat"><div class="gstat-val earth-lbl">1.35 m</div><div class="gstat-label">Stride length</div></div>
+          <div class="gstat"><div class="gstat-val earth-lbl">1.9 Hz</div><div class="gstat-label">Cadence</div></div>
+          <div class="gstat"><div class="gstat-val earth-lbl">~0%</div><div class="gstat-label">Aerial phase</div></div>
+          <div class="gstat"><div class="gstat-val earth-lbl">3.5 W/kg</div><div class="gstat-label">Met. cost</div></div>
+        </div>
+      </div>
+
+      <!-- Mars side -->
+      <div class="gait-side" style="background: var(--bg2);">
+        <div class="gait-label mars-lbl">Mars — 0.38g</div>
+        <canvas id="marsCanvas" width="280" height="200"></canvas>
+        <div class="gait-stats">
+          <div class="gstat"><div class="gstat-val mars-lbl">1.85 m</div><div class="gstat-label">Stride length</div></div>
+          <div class="gstat"><div class="gstat-val mars-lbl">1.3 Hz</div><div class="gstat-label">Cadence</div></div>
+          <div class="gstat"><div class="gstat-val mars-lbl">~32%</div><div class="gstat-label">Aerial phase</div></div>
+          <div class="gstat"><div class="gstat-val mars-lbl">2.1 W/kg</div><div class="gstat-label">Met. cost</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:10px;font-size:10px;color:var(--muted);letter-spacing:0.06em;line-height:1.7;padding:0 2px;">
+      At 0.38g, preferred walking speed decreases by ~20%, stride length increases by ~37%, and cadence drops by ~32%. 
+      The extended aerial phase (ballistic flight between steps) is a key biomechanical marker of Martian locomotion, 
+      resembling a slow-motion run. Ground reaction forces are reduced proportionally to gravity.
+    </div>
+  </div>
+
+  <!-- ═══════ SECTION 2: METABOLIC ═══════ -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-num">02</span>
+      <span class="section-title">Metabolic Cost vs Gravity</span>
+      <span class="section-sub">U-shaped energy paradox — cost rises at very low gravity</span>
+    </div>
+
+    <div class="metabolic-layout">
+      <div class="slider-panel">
+        <label>Gravitational level</label>
+        <input type="range" id="gravSlider" min="10" max="100" value="38" step="1">
+        <div class="gravity-display">
+          <div class="gravity-value" id="gravVal">0.38</div>
+          <div class="gravity-unit">× Earth gravity</div>
+        </div>
+        <div class="planet-indicator">
+          <div class="planet-name" id="planetName" style="color:var(--mars-light);">Mars</div>
+          <div style="font-size:10px;color:var(--muted);letter-spacing:0.06em;" id="planetDesc">Reduced GRF, extended aerial phase</div>
+          <div class="met-readout" id="metReadout">2.1 W/kg</div>
+          <div class="met-readout-lbl">Metabolic cost of locomotion</div>
+        </div>
+
+        <div style="margin-top:16px;font-size:10px;color:var(--muted);line-height:1.7;letter-spacing:0.04em;">
+          The U-curve arises because at very low gravity (&lt;0.15g), maintaining balance and muscular coordination 
+          demands excess energy despite reduced weight-bearing load. The cost minimum occurs near 0.25–0.35g.
+        </div>
+      </div>
+
+      <div class="chart-card">
+        <div style="font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:12px;">
+          Metabolic cost of locomotion (W/kg) across gravity levels
+        </div>
+        <div style="position:relative;height:260px;">
+          <canvas id="metChart" role="img" aria-label="Line chart showing metabolic cost of locomotion from 0.1g to 1g, with U-shaped curve. Cost is high at very low gravity, dips around 0.3g, then rises again toward Earth gravity.">Metabolic cost is highest at very low gravity (below 0.15g), reaches a minimum near 0.3g, then rises steadily toward Earth's 3.5 W/kg at 1g.</canvas>
+        </div>
+        <div id="metAnnotation" class="annotation-box" style="display:none;"></div>
+        <div class="legend-row" style="margin-top:14px;">
+          <div class="legend-item"><div class="legend-line" style="background:var(--mars);height:2px;"></div>Metabolic cost curve</div>
+          <div class="legend-item"><div style="width:10px;height:10px;border-radius:50%;background:var(--mars-light);border:2px solid var(--bg);flex-shrink:0;"></div>Current gravity</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════ SECTION 3: BONE DENSITY ═══════ -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-num">03</span>
+      <span class="section-title">Bone Mineral Density Timeline</span>
+      <span class="section-sub">Projected BMD loss over 12 months at 0.38g — ~0.22%/week</span>
+    </div>
+
+    <div class="card" style="position:relative;">
+      <div class="bone-controls">
+        <button class="bone-btn active" id="btnAnimate" onclick="startBoneAnim()">▶ Animate timeline</button>
+        <button class="bone-btn" id="btnReset" onclick="resetBoneAnim()">↺ Reset</button>
+        <div style="margin-left:auto;display:flex;gap:16px;">
+          <div class="legend-item"><div class="legend-line" style="background:var(--mars);height:2px;"></div>Mars (0.38g)</div>
+          <div class="legend-item"><div class="legend-line dashed"></div>Earth (1g)</div>
+          <div class="legend-item"><div class="legend-line" style="background:#f0c040;height:2px;"></div>WHO clinical threshold</div>
+        </div>
+      </div>
+
+      <div style="position:relative;height:300px;">
+        <canvas id="boneChart" role="img" aria-label="Line chart showing bone mineral density percentage over 12 months. Mars mission line declines from 100% at month 0 to approximately 88.6% by month 12. Earth baseline stays flat at 100%.">Bone mineral density on Mars decreases from 100% at mission start to approximately 88.6% by month 12, losing roughly 0.22% per week. Earth baseline remains flat at 100%.</canvas>
+      </div>
+
+      <div style="margin-top:12px;font-size:10px;color:var(--muted);line-height:1.7;letter-spacing:0.04em;">
+        Based on ISS data extrapolated to 0.38g partial gravity. Actual loss rate may vary with exercise countermeasures 
+        (ARED resistance training reduces loss to ~0.5%/month). WHO osteoporosis threshold is T-score ≤ −2.5, 
+        corresponding to approximately 87–88% of peak BMD. Without countermeasures, a 12-month Mars mission 
+        approaches clinically significant bone loss.
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+// ═══════════════════════════════════
+// SECTION 1 — ANIMATED STICK FIGURES
+// ═══════════════════════════════════
+
+function drawStickFigure(ctx, x, y, phase, gravity, color, scale) {
+  // phase 0–1 = gait cycle
+  const g = gravity; // 0.38 or 1.0
+  const strideAmp = scale * (1.0 + (1.0 - g) * 0.5); // longer stride at low g
+  const bounceAmp = scale * (1.0 + (1.0 - g) * 1.6); // bigger aerial at low g
+  const freqMult = g < 0.5 ? 0.7 : 1.0; // slower cadence on Mars
+
+  // Body bob
+  const bob = Math.abs(Math.sin(phase * Math.PI * 2)) * bounceAmp * 0.3;
+
+  // Head
+  const headY = y - 42 * scale - bob;
+  ctx.beginPath();
+  ctx.arc(x, headY, 9 * scale, 0, Math.PI * 2);
+  ctx.fillStyle = color;
+  ctx.fill();
+
+  // Torso
+  const torsoBot = headY + 30 * scale;
+  ctx.beginPath();
+  ctx.moveTo(x, headY + 9 * scale);
+  ctx.lineTo(x, torsoBot);
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2.5 * scale;
+  ctx.stroke();
+
+  // Arms
+  const armPhase = phase * Math.PI * 2;
+  const armSwing = strideAmp * 0.45;
+  // Left arm
+  ctx.beginPath();
+  ctx.moveTo(x, headY + 14 * scale);
+  ctx.lineTo(x - Math.cos(armPhase) * armSwing, headY + 24 * scale + Math.sin(armPhase) * armSwing * 0.4);
+  ctx.stroke();
+  // Right arm
+  ctx.beginPath();
+  ctx.moveTo(x, headY + 14 * scale);
+  ctx.lineTo(x + Math.cos(armPhase) * armSwing, headY + 24 * scale - Math.sin(armPhase) * armSwing * 0.4);
+  ctx.stroke();
+
+  // Legs — walking cycle
+  const legPhase = phase * Math.PI * 2;
+  const legSwing = strideAmp * 0.55;
+
+  // Aerial phase on Mars
+  const aerialFrac = g < 0.5 ? 0.32 : 0.0;
+  const inAerial = (phase % 1.0) > (1.0 - aerialFrac);
+  const groundLift = inAerial ? bounceAmp * 0.8 : 0;
+
+  // Left leg
+  const lx = x - Math.sin(legPhase) * legSwing;
+  const ly = torsoBot + 28 * scale - (inAerial ? groundLift * 0.5 : 0);
+  ctx.beginPath();
+  ctx.moveTo(x, torsoBot);
+  ctx.lineTo(lx, ly);
+  ctx.stroke();
+
+  // Right leg
+  const rx = x + Math.sin(legPhase) * legSwing;
+  const ry = torsoBot + 28 * scale - (inAerial ? groundLift * 0.9 : 0);
+  ctx.beginPath();
+  ctx.moveTo(x, torsoBot);
+  ctx.lineTo(rx, ry);
+  ctx.stroke();
+
+  // Ground line indicator
+  if (inAerial && g < 0.5) {
+    ctx.save();
+    ctx.strokeStyle = 'rgba(224,90,43,0.4)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3, 3]);
+    ctx.beginPath();
+    ctx.moveTo(x - 18 * scale, y);
+    ctx.lineTo(x + 18 * scale, y);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+  }
+}
+
+let gaitT = 0;
+const earthCanvas = document.getElementById('earthCanvas');
+const marsCanvas = document.getElementById('marsCanvas');
+const ectx = earthCanvas.getContext('2d');
+const mctx = marsCanvas.getContext('2d');
+
+function animateGait() {
+  gaitT += 0.008;
+
+  // Earth canvas
+  ectx.clearRect(0, 0, 280, 200);
+  // Ground
+  ectx.fillStyle = 'rgba(74,158,255,0.1)';
+  ectx.fillRect(0, 172, 280, 28);
+  ectx.strokeStyle = 'rgba(74,158,255,0.25)';
+  ectx.lineWidth = 1;
+  ectx.beginPath(); ectx.moveTo(0, 172); ectx.lineTo(280, 172); ectx.stroke();
+
+  // Trail dots for Earth
+  for (let i = 0; i < 4; i++) {
+    const tx = 60 + ((gaitT - i * 0.1) * 60) % 180;
+    ectx.beginPath();
+    ectx.arc(tx, 172, 2, 0, Math.PI * 2);
+    ectx.fillStyle = `rgba(74,158,255,${0.3 - i*0.07})`;
+    ectx.fill();
+  }
+
+  drawStickFigure(ectx, 140, 172, gaitT * 1.9, 1.0, '#4a9eff', 1.0);
+
+  // Mars canvas
+  mctx.clearRect(0, 0, 280, 200);
+  mctx.fillStyle = 'rgba(224,90,43,0.08)';
+  mctx.fillRect(0, 172, 280, 28);
+  mctx.strokeStyle = 'rgba(224,90,43,0.25)';
+  mctx.lineWidth = 1;
+  mctx.beginPath(); mctx.moveTo(0, 172); mctx.lineTo(280, 172); mctx.stroke();
+
+  // Trail dots for Mars
+  for (let i = 0; i < 3; i++) {
+    const tx = 60 + ((gaitT - i * 0.13) * 42) % 200;
+    mctx.beginPath();
+    mctx.arc(tx, 172, 2, 0, Math.PI * 2);
+    mctx.fillStyle = `rgba(224,90,43,${0.35 - i*0.1})`;
+    mctx.fill();
+  }
+
+  drawStickFigure(mctx, 140, 172, gaitT * 1.3, 0.38, '#e05a2b', 1.0);
+
+  requestAnimationFrame(animateGait);
+}
+animateGait();
+
+
+// ════════════════════════════════════
+// SECTION 2 — METABOLIC CHART
+// ════════════════════════════════════
+
+// Generate U-shaped metabolic curve
+function metabolicCost(g) {
+  // Based on literature: Minetti et al., Griffin et al.
+  // Minimum around 0.3g, increases at very low g and at 1g
+  const base = 3.5 * g; // linear weight-bearing component
+  const lowGPenalty = 1.8 * Math.exp(-12 * (g - 0.15)); // penalty for very low g
+  const stabilizationCost = 0.4 * Math.exp(-5 * g); // balance cost
+  return Math.max(0.8, base + lowGPenalty + stabilizationCost);
+}
+
+const gravLabels = [];
+const gravData = [];
+for (let g = 0.10; g <= 1.01; g += 0.01) {
+  gravLabels.push(g.toFixed(2) + 'g');
+  gravData.push(+metabolicCost(g).toFixed(3));
+}
+
+const metCtx = document.getElementById('metChart').getContext('2d');
+let currentDotG = 0.38;
+let metChart;
+
+const markerPlugin = {
+  id: 'markerPlugin',
+  afterDatasetsDraw(chart) {
+    const ds = chart.data.datasets[0];
+    const meta = chart.getDatasetMeta(0);
+    const idx = Math.round((currentDotG - 0.1) / 0.01);
+    if (idx < 0 || idx >= meta.data.length) return;
+    const pt = meta.data[idx];
+    const ctx2 = chart.ctx;
+    ctx2.save();
+    ctx2.beginPath();
+    ctx2.arc(pt.x, pt.y, 6, 0, Math.PI * 2);
+    ctx2.fillStyle = '#f0844a';
+    ctx2.strokeStyle = '#0a0a0f';
+    ctx2.lineWidth = 2;
+    ctx2.fill();
+    ctx2.stroke();
+    ctx2.restore();
+
+    // Crosshair lines
+    ctx2.save();
+    ctx2.strokeStyle = 'rgba(224,90,43,0.25)';
+    ctx2.lineWidth = 1;
+    ctx2.setLineDash([4, 4]);
+    ctx2.beginPath();
+    ctx2.moveTo(pt.x, chart.chartArea.top);
+    ctx2.lineTo(pt.x, pt.y);
+    ctx2.stroke();
+    ctx2.beginPath();
+    ctx2.moveTo(chart.chartArea.left, pt.y);
+    ctx2.lineTo(pt.x, pt.y);
+    ctx2.stroke();
+    ctx2.restore();
+  }
+};
+
+Chart.register(markerPlugin);
+
+metChart = new Chart(metCtx, {
+  type: 'line',
+  data: {
+    labels: gravLabels,
+    datasets: [{
+      data: gravData,
+      borderColor: '#e05a2b',
+      borderWidth: 2.5,
+      pointRadius: 0,
+      pointHoverRadius: 0,
+      tension: 0.4,
+      fill: {
+        target: 'origin',
+        above: 'rgba(224,90,43,0.06)'
+      }
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    animation: { duration: 0 },
+    plugins: {
+      legend: { display: false },
+      tooltip: { enabled: false }
+    },
+    scales: {
+      x: {
+        ticks: {
+          color: '#5a5855',
+          font: { family: 'Courier New', size: 9 },
+          maxTicksLimit: 10,
+          autoSkip: true
+        },
+        grid: { color: 'rgba(255,255,255,0.04)' },
+        border: { color: 'rgba(255,255,255,0.1)' }
+      },
+      y: {
+        min: 0,
+        max: 5,
+        ticks: {
+          color: '#5a5855',
+          font: { family: 'Courier New', size: 9 },
+          callback: v => v.toFixed(1) + ' W/kg'
+        },
+        grid: { color: 'rgba(255,255,255,0.04)' },
+        border: { color: 'rgba(255,255,255,0.1)' }
+      }
+    }
+  }
+});
+
+const slider = document.getElementById('gravSlider');
+const gravValEl = document.getElementById('gravVal');
+const planetNameEl = document.getElementById('planetName');
+const planetDescEl = document.getElementById('planetDesc');
+const metReadoutEl = document.getElementById('metReadout');
+
+const planets = [
+  { g: 0.38, name: 'Mars', desc: 'Reduced GRF, extended aerial phase', col: '#f0844a' },
+  { g: 1.00, name: 'Earth', desc: 'Normal weight-bearing, optimal gait', col: '#4a9eff' },
+  { g: 0.17, name: 'Moon', desc: 'Loping gait, high aerial fraction', col: '#c8c0b4' },
+  { g: 0.38, name: 'Mars', desc: 'Reduced GRF, extended aerial phase', col: '#f0844a' },
+  { g: 0.91, name: 'Venus', desc: 'Near-Earth, slight gait changes', col: '#e8d84a' },
+  { g: 0.38, name: 'Mars', desc: '─', col: '#f0844a' }
+];
+
+function getPlanet(g) {
+  if (Math.abs(g - 1.00) < 0.04) return { name: 'Earth', desc: 'Normal weight-bearing, optimal gait', col: '#4a9eff' };
+  if (Math.abs(g - 0.38) < 0.04) return { name: 'Mars', desc: 'Reduced GRF, extended aerial phase', col: '#f0844a' };
+  if (Math.abs(g - 0.17) < 0.04) return { name: 'Moon', desc: 'Loping gait, high aerial fraction', col: '#c8c0b4' };
+  if (g < 0.20) return { name: 'Very low-g', desc: 'High metabolic penalty for balance', col: '#e05a2b' };
+  if (g < 0.50) return { name: 'Low-g body', desc: 'Reduced cost, gait transition zone', col: '#e07a40' };
+  return { name: `${(g * 9.81).toFixed(1)} m/s²`, desc: 'Intermediate gravity environment', col: '#8888ff' };
+}
+
+slider.addEventListener('input', function() {
+  const g = this.value / 100;
+  currentDotG = g;
+  gravValEl.textContent = g.toFixed(2);
+
+  const cost = metabolicCost(g);
+  metReadoutEl.textContent = cost.toFixed(2) + ' W/kg';
+
+  const planet = getPlanet(g);
+  planetNameEl.textContent = planet.name;
+  planetNameEl.style.color = planet.col;
+  planetDescEl.textContent = planet.desc;
+
+  metChart.update('none');
+});
+
+
+// ════════════════════════════════════
+// SECTION 3 — BONE DENSITY ANIMATION
+// ════════════════════════════════════
+
+const months = Array.from({length: 13}, (_, i) => `Month ${i}`);
+const earthBMD = Array(13).fill(100);
+const LOSS_PER_WEEK = 0.22;
+const marsBMD = months.map((_, i) => +(100 - i * 4.33 * LOSS_PER_WEEK).toFixed(2));
+const threshold = Array(13).fill(88.0);
+
+const boneCtx = document.getElementById('boneChart').getContext('2d');
+let boneAnimProgress = 13; // 0–12 animated months
+let boneAnimId = null;
+let boneAnimMonth = 0;
+
+const boneChart = new Chart(boneCtx, {
+  type: 'line',
+  data: {
+    labels: months,
+    datasets: [
+      {
+        label: 'Mars 0.38g',
+        data: Array(13).fill(null),
+        borderColor: '#e05a2b',
+        borderWidth: 2.5,
+        pointRadius: 3,
+        pointBackgroundColor: '#e05a2b',
+        pointBorderColor: '#0a0a0f',
+        pointBorderWidth: 1.5,
+        tension: 0.3,
+        fill: { target: 'end', above: 'rgba(224,90,43,0.06)' }
+      },
+      {
+        label: 'Earth 1g',
+        data: earthBMD,
+        borderColor: '#4a9eff',
+        borderWidth: 1.5,
+        borderDash: [6, 4],
+        pointRadius: 0,
+        tension: 0,
+      },
+      {
+        label: 'WHO threshold',
+        data: threshold,
+        borderColor: '#f0c040',
+        borderWidth: 1,
+        borderDash: [3, 5],
+        pointRadius: 0,
+        tension: 0,
+      }
+    ]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    animation: { duration: 0 },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        enabled: true,
+        backgroundColor: '#1a1a24',
+        titleColor: '#7a7870',
+        bodyColor: '#e8e6e0',
+        borderColor: 'rgba(255,255,255,0.1)',
+        borderWidth: 1,
+        titleFont: { family: 'Courier New', size: 10 },
+        bodyFont: { family: 'Courier New', size: 11 },
+        callbacks: {
+          label: ctx => {
+            if (ctx.datasetIndex === 0 && ctx.parsed.y !== null)
+              return `Mars BMD: ${ctx.parsed.y.toFixed(1)}% (lost ${(100-ctx.parsed.y).toFixed(1)}%)`;
+            return null;
+          }
+        }
+      }
+    },
+    scales: {
+      x: {
+        ticks: { color: '#5a5855', font: { family: 'Courier New', size: 9 } },
+        grid: { color: 'rgba(255,255,255,0.04)' },
+        border: { color: 'rgba(255,255,255,0.1)' }
+      },
+      y: {
+        min: 82,
+        max: 101,
+        ticks: {
+          color: '#5a5855',
+          font: { family: 'Courier New', size: 9 },
+          callback: v => v + '%'
+        },
+        grid: { color: 'rgba(255,255,255,0.04)' },
+        border: { color: 'rgba(255,255,255,0.1)' }
+      }
+    }
+  }
+});
+
+// Initialize with full data shown
+boneChart.data.datasets[0].data = [...marsBMD];
+boneChart.update('none');
+
+function startBoneAnim() {
+  if (boneAnimId) return;
+  boneChart.data.datasets[0].data = Array(13).fill(null);
+  boneChart.update('none');
+  boneAnimMonth = 0;
+  document.getElementById('btnAnimate').classList.remove('active');
+
+  function step() {
+    if (boneAnimMonth > 12) {
+      boneAnimId = null;
+      document.getElementById('btnAnimate').classList.add('active');
+      return;
+    }
+    boneChart.data.datasets[0].data[boneAnimMonth] = marsBMD[boneAnimMonth];
+    boneChart.update('none');
+    boneAnimMonth++;
+    boneAnimId = setTimeout(step, 180);
+  }
+  boneAnimId = setTimeout(step, 100);
+}
+
+function resetBoneAnim() {
+  if (boneAnimId) { clearTimeout(boneAnimId); boneAnimId = null; }
+  boneAnimMonth = 0;
+  boneChart.data.datasets[0].data = [...marsBMD];
+  boneChart.update('none');
+  document.getElementById('btnAnimate').classList.add('active');
+}
+</script>
+</body>
+</html>
